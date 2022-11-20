@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result};
+use rusqlite::{params, Connection, Result};
 // use std::fs;
 // use std::io;
 
@@ -9,9 +9,9 @@ struct Project {
     path: String,
 }
 
-fn create_db(conn: Connection) {
+fn create_db(conn: &Connection) {
     match conn.execute(
-        "CREATE TABLE projects (
+        "CREATE TABLE IF NOT EXISTS projects (
             id    INTEGER PRIMARY KEY,
             name  TEXT NOT NULL,
             path  TEXT NOT NULL
@@ -23,18 +23,35 @@ fn create_db(conn: Connection) {
     };
 }
 
-fn main() -> Result<()> {
-    let conn = Connection::open_in_memory()?;
+fn save_to_db(conn: &Connection, project: &Project) {
+    let sql = String::from(
+        "INSERT INTO projects (id, name, path)
+           VALUES (?, ?, ?)",
+    );
 
-    create_db(conn);
+    match conn.execute(&sql, params![project.id, project.name, project.path]) {
+        Ok(updated) => println!("Added {} row to the project db", updated),
+        Err(err) => println!(
+            "ERROR: failed to update project database: {}",
+            err.to_string()
+        ),
+    }
+}
+
+fn main() -> Result<()> {
+    let path = "./projects.db3";
+
+    let conn = Connection::open(path)?;
+
+    create_db(&conn);
 
     let fred = Project {
         id: 0,
         name: "Steven".to_string(),
         path: "/home/steven/steven".to_string(),
     };
-    println!("{}", fred.id);
-    println!("{:?}", fred);
+    save_to_db(&conn, &fred);
+
     /*
        conn.execute(
            "INSERT INTO person (name, data) VALUES (?1, ?2)",

@@ -1,12 +1,38 @@
+use std::collections::HashMap;
+
+use config::Config;
 use rusqlite::{params, Connection, Result};
 // use std::fs;
 // use std::io;
 
 #[derive(Debug)]
 struct Project {
-    id: i32,
     name: String,
     path: String,
+}
+
+#[derive(Debug)]
+#[allow(unused)]
+struct Settings {
+    db_file: String,
+    project_dirs: [String],
+}
+
+fn get_config() -> Config {
+    // TODO: Handle case for configuration file not found
+    let settings = match Config::builder()
+        // what's an error case for set_default()??
+        .set_default("db_file", "./projects.db3")
+        .unwrap()
+        .set_default("project_dirs", "/home/lloyd/Devel")
+        .unwrap()
+        .add_source(config::File::with_name("./projects.yaml"))
+        .build()
+    {
+        Err(err) => panic!("Error reading config file: {}", err),
+        Ok(settings) => settings,
+    };
+    settings
 }
 
 fn create_db(conn: &Connection) {
@@ -25,11 +51,11 @@ fn create_db(conn: &Connection) {
 
 fn save_to_db(conn: &Connection, project: &Project) {
     let sql = String::from(
-        "INSERT INTO projects (id, name, path)
-           VALUES (?, ?, ?)",
+        "INSERT INTO projects (name, path)
+           VALUES (?, ?)",
     );
 
-    match conn.execute(&sql, params![project.id, project.name, project.path]) {
+    match conn.execute(&sql, params![project.name, project.path]) {
         Ok(updated) => println!("Added {} row to the project db", updated),
         Err(err) => println!(
             "ERROR: failed to update project database: {}",
@@ -38,15 +64,24 @@ fn save_to_db(conn: &Connection, project: &Project) {
     }
 }
 
-fn main() -> Result<()> {
-    let path = "./projects.db3";
+fn read_from_db(conn: &Connection) -> Result {
+    let mut sql = conn.prepare(
+        "SELECT name, path FROM projects;"
+    )?;
+    let result = HashMap::new();
+}
 
-    let conn = Connection::open(path)?;
+fn main() -> Result<()> {
+    let settings = get_config();
+
+    let conn = match Connection::open(settings.get::<String>("db_file").unwrap()) {
+        Err(err) => panic!("Configuration retrieval failure: {}", err),
+        Ok(connection) => connection,
+    };
 
     create_db(&conn);
 
     let fred = Project {
-        id: 0,
         name: "Steven".to_string(),
         path: "/home/steven/steven".to_string(),
     };

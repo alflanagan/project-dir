@@ -71,7 +71,7 @@ fn read_from_db(conn: &Connection) -> Result<HashMap<String, String>> {
     Ok(result)
 }
 
-fn main() -> Result<()> {
+fn main() {
     let settings = get_config();
 
     let conn = match Connection::open(settings.get::<String>("db_file").unwrap()) {
@@ -95,25 +95,4 @@ fn main() -> Result<()> {
     for (name, path) in projects {
         println!("project: {}: {}", name, path);
     }
-
-    /*
-       conn.execute(
-           "INSERT INTO person (name, data) VALUES (?1, ?2)",
-           (&me.name, &me.data),
-       )?;
-
-       let mut stmt = conn.prepare("SELECT id, name, data FROM person")?;
-       let person_iter = stmt.query_map([], |row| {
-           Ok(Person {
-               id: row.get(0)?,
-               name: row.get(1)?,
-               data: row.get(2)?,
-           })
-       })?;
-
-       for person in person_iter {
-           println!("Found person {:?}", person.unwrap());
-       }
-    */
-    Ok(())
 }

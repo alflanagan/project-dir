@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+// use std::fs::read;
 
 use config::Config;
 use rusqlite::{params, Connection, Result};
@@ -20,7 +21,7 @@ struct Settings {
 
 fn get_config() -> Config {
     // TODO: Handle case for configuration file not found
-    let settings = match Config::builder()
+    match Config::builder()
         // what's an error case for set_default()??
         .set_default("db_file", "./projects.db3")
         .unwrap()
@@ -31,8 +32,7 @@ fn get_config() -> Config {
     {
         Err(err) => panic!("Error reading config file: {}", err),
         Ok(settings) => settings,
-    };
-    settings
+    }
 }
 
 fn create_db(conn: &Connection) {
@@ -57,18 +57,18 @@ fn save_to_db(conn: &Connection, project: &Project) {
 
     match conn.execute(&sql, params![project.name, project.path]) {
         Ok(updated) => println!("Added {} row to the project db", updated),
-        Err(err) => println!(
-            "ERROR: failed to update project database: {}",
-            err.to_string()
-        ),
+        Err(err) => println!("ERROR: failed to update project database: {}", err),
     }
 }
 
-fn read_from_db(conn: &Connection) -> Result {
-    let mut sql = conn.prepare(
-        "SELECT name, path FROM projects;"
-    )?;
-    let result = HashMap::new();
+fn read_from_db(conn: &Connection) -> Result<HashMap<String, String>> {
+    let mut sql = conn.prepare("SELECT name, path FROM projects;")?;
+    let result: HashMap<String, String> = HashMap::new();
+    let rows = sql.query_map([], |row| row.get::<usize, String>(0))?;
+    for row in rows {
+        println!("{}", row.unwrap());
+    }
+    Ok(result)
 }
 
 fn main() -> Result<()> {
@@ -86,6 +86,15 @@ fn main() -> Result<()> {
         path: "/home/steven/steven".to_string(),
     };
     save_to_db(&conn, &fred);
+
+    let projects = match read_from_db(&conn) {
+        Ok(projects) => projects,
+        Err(e) => panic!("failure reading from database: {}", e),
+    };
+
+    for (name, path) in projects {
+        println!("project: {}: {}", name, path);
+    }
 
     /*
        conn.execute(

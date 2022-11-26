@@ -3,8 +3,9 @@ use std::collections::HashMap;
 
 use config::Config;
 use rusqlite::{params, Connection, Result};
-// use std::fs;
-// use std::io;
+use std::fs;
+use std::io;
+use std::path::Path;
 
 #[derive(Debug)]
 struct Project {
@@ -17,6 +18,28 @@ struct Project {
 struct Settings {
     db_file: String,
     project_dirs: [String],
+}
+
+fn scan_for_projects(conn: &Connection, dir: &Path) -> io::Result<()> {
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                scan_for_projects(conn, &path)?;
+            } else {
+                if path.ends_with(".git") {
+                    println!("{:?}", path);
+                    let project = Project {
+                        path: path.display().to_string(),
+                        name: "fred".to_string(),
+                    };
+                    save_to_db(conn, &project);
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn get_config() -> Config {
@@ -84,6 +107,14 @@ fn read_from_db(conn: &Connection) -> Result<HashMap<String, String>> {
     Ok(result)
 }
 
+fn find_projects(conn: &Connection, dirs: Vec<String>) {
+    for dir in dirs.iter() {
+        let path = Path::new(dir);
+        scan_for_projects(conn, path)
+            .expect(&*format!("Unable to scan directory {}", path.display()));
+    }
+}
+
 fn main() {
     let settings = get_config();
 
@@ -94,11 +125,8 @@ fn main() {
 
     create_db(&conn);
 
-    let fred = Project {
-        name: "Steven".to_string(),
-        path: "/home/steven/steven".to_string(),
-    };
-    save_to_db(&conn, &fred);
+    // TODO: check for param --refresh, if found do find-projects(), otherwise read from db
+    find_projects(&conn, settings.get("project_dirs").unwrap());
 
     let projects = match read_from_db(&conn) {
         Ok(projects) => projects,

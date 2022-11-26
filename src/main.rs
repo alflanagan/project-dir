@@ -38,10 +38,10 @@ fn test_config() {
     // file with certain contents
     let config = get_config();
     let db_file: String = config.get("db_file").unwrap();
-    let mut project_dirs = config.get_array("project_dirs").unwrap();
+    let project_dirs = config.get_array("project_dirs").unwrap();
     assert_eq!(db_file, "projects.db3");
     assert_eq!(project_dirs.len(), 1);
-    for dir in project_dirs.iter_mut() {
+    for dir in project_dirs.iter() {
         // got to be a better solution than .clone() here
         let d = dir.clone().into_string().unwrap();
         assert_eq!(d, "/home/lloyd/Devel/Personal");

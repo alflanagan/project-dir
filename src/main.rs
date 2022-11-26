@@ -42,8 +42,8 @@ fn test_config() {
     assert_eq!(db_file, "projects.db3");
     assert_eq!(project_dirs.len(), 1);
     for dir in project_dirs.iter() {
-        // got to be a better solution than .clone() here
-        let d = dir.clone().into_string().unwrap();
+        // is there some way to do this without ownership?
+        let d = dir.to_owned().into_string().unwrap();
         assert_eq!(d, "/home/lloyd/Devel/Personal");
     }
 }

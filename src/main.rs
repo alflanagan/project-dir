@@ -1,3 +1,5 @@
+//! CLI to generate a `project` command you can use in your shell.
+//!
 //! project-dir is a simple utility that reads a configured directory tree (or trees) and finds all
 //! the .git source control directories in them. For each directory found, it remembers the parent
 //! directory and the project name (the name of the immediate parent of .git).

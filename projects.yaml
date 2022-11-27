@@ -1,4 +1,5 @@
 ---
-db_file: projects.db3
+db_file: ~/.projects.db3
 project_dirs:
-    - /home/lloyd/Devel/Personal
+  - /home/lloyd/Devel
+  - /home/lloyd/oldDevel

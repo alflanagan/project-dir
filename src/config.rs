@@ -1,3 +1,4 @@
+use std::env;
 pub use config::Config;
 
 #[derive(Debug)]
@@ -5,6 +6,24 @@ pub use config::Config;
 struct Settings {
     db_file: String,
     project_dirs: [String],
+}
+
+pub fn expand_home(dirname: &str) -> String {
+    if dirname.starts_with("~") {
+        let dir_copy = dirname.clone().to_owned();
+        dir_copy.replace("~", env::var("HOME").unwrap().as_str())
+    } else {
+        dirname.to_owned()
+    }
+}
+
+#[test]
+fn test_expand_home() {
+    assert_eq!(expand_home("/home/fred/"), "/home/fred/");
+    // TODO: is there a mock for env::var() call?
+    let expanded = expand_home("~/i/am/a/teapot");
+    let expected = format!("{}/i/am/a/teapot", env::var("HOME").unwrap());
+    assert_eq!(expanded, expected)
 }
 
 pub fn get_config() -> Config {
@@ -22,16 +41,12 @@ pub fn get_config() -> Config {
 
 #[test]
 fn test_config() {
-    // how do I set up dummy config file? this assumes the existence of a
-    // file with certain contents
+    // TODO: how do I set up dummy config file? this assumes the existence of a file with certain
+    // contents
     let config = get_config();
-    let db_file: String = config.get("db_file").unwrap();
+    let db_file = expand_home(config.get::<String>("db_file").unwrap().as_str());
     let project_dirs = config.get_array("project_dirs").unwrap();
-    assert_eq!(db_file, "projects.db3");
-    assert_eq!(project_dirs.len(), 1);
-    for dir in project_dirs.iter() {
-        // is there some way to do this without ownership?
-        let d = dir.to_owned().into_string().unwrap();
-        assert_eq!(d, "/home/lloyd/Devel/Personal");
-    }
+    assert_eq!(db_file, String::from("/home/lloyd/.projects.db3"));
+    assert_eq!(project_dirs.len(), 2);
+    assert_eq!(project_dirs[0].to_string(), "/home/lloyd/Devel");
 }

@@ -1,6 +1,18 @@
+//! project-dir is a simple utility that reads a configured directory tree (or trees) and finds all
+//! the .git source control directories in them. For each directory found, it remembers the parent
+//! directory and the project name (the name of the immediate parent of .git).
+//!
+//! It then creates a shell function the user can invoke with the command `project project-name`.
+//! The shell function will change the user's directory to the project directory, and set up the
+//! shell environment in useful ways depending on the type of project. This may include, for instance,
+//! switching to a specific node version, activating a virtual environment, or starting some
+//! background service. (The part where we set up actions is not yet well-specified).
+
 // #![allow(unused_imports, unused_variables, dead_code)]
 mod config;
 mod db;
+mod scripts;
+
 use std::env;
 use std::fs;
 use std::io;

@@ -1,3 +1,4 @@
+pub use rusqlite;
 pub use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
 
@@ -7,30 +8,30 @@ pub struct Project {
     pub path: String,
 }
 
-pub fn create_db(conn: &Connection) {
-    match conn.execute(
+pub fn create_db(conn: &Connection) -> rusqlite::Result<()> {
+    conn.execute(
         "CREATE TABLE IF NOT EXISTS projects (
             id    INTEGER PRIMARY KEY,
             name  TEXT NOT NULL,
             path  TEXT NOT NULL
         )",
         (), // empty list of parameters.
-    ) {
-        Ok(updated) => println!("Create table projects, got {} result.", updated),
-        Err(err) => panic!("Failed to create table projects: {}.", err),
-    };
+    )
+    .and_then(|updated| {
+        println!("Create table projects, got {} result.", updated);
+        Ok(())
+    })
 }
 
-pub fn save_to_db(conn: &Connection, project: &Project) {
-    let sql = String::from(
-        "INSERT INTO projects (name, path)
-           VALUES (?, ?)",
-    );
-
-    match conn.execute(&sql, params![project.name, project.path]) {
-        Ok(updated) => println!("Added {} row to the project db", updated),
-        Err(err) => println!("ERROR: failed to update project database: {}", err),
-    }
+pub fn save_to_db(conn: &Connection, project: &Project) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO projects (name, path) VALUES (?, ?)",
+        params![project.name, project.path],
+    )
+    .and_then(|updated| {
+        println!("Added {} row to the project db", updated);
+        Ok(())
+    })
 }
 
 pub fn read_from_db(conn: &Connection) -> Result<HashMap<String, String>> {
@@ -41,4 +42,12 @@ pub fn read_from_db(conn: &Connection) -> Result<HashMap<String, String>> {
         println!("{}", row.unwrap());
     }
     Ok(result)
+}
+
+pub fn clear_table(conn: &Connection) -> rusqlite::Result<()> {
+    conn.execute("DELETE FROM projects", ())
+        .and_then(|updated| {
+            println!("Added {} row to the project db", updated);
+            Ok(())
+        })
 }

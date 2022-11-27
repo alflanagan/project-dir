@@ -2,10 +2,14 @@
 name = "project-dir"
 version = "0.1.0"
 edition = "2021"
-description = "A command-line utility to create a simple project command."
+description = "A CLI utility to create a simple shell command to activate a project."
 license = "GPL-3"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+publish = false
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 config = { version = "0.13.2", features = ["yaml"] }
 rusqlite = { version = "0.28.0", features = ["bundled"] }
+
+[badges]
+maintenance = { status = "experimental" }

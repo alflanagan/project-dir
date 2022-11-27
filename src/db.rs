@@ -42,7 +42,5 @@ pub fn read_from_db(conn: &Connection) -> rusqlite::Result<HashMap<String, Strin
 
 pub fn clear_table(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM projects", ())
-        .and_then(|_updated| {
-            Ok(())
-        })
+        .and_then(|_updated| Ok(()))
 }

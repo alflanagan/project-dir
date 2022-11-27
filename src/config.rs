@@ -1,5 +1,5 @@
-use std::env;
 pub use config::Config;
+use std::env;
 
 #[derive(Debug)]
 #[allow(unused)]

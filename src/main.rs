@@ -25,9 +25,13 @@ fn scan_for_projects(conn: &db::Connection, dir: &Path) -> io::Result<()> {
                         path: path.display().to_string(),
                         name: project_name.to_owned(),
                     };
-                    db::save_to_db(conn, &project).expect(
+                    let count = db::save_to_db(conn, &project).expect(
                         format!("Failure to save project {} to database", project_name).as_str(),
-                    )
+                    );
+                    // panic is appropriate here, I don't know how this could happen or what to do
+                    if count != 1 {
+                        panic!("Expected to update 1 row, but updated {}", count)
+                    }
                     // don't recurse here, we don't want sub-modules
                 } else {
                     scan_for_projects(conn, &path)?;
@@ -51,14 +55,24 @@ fn main() -> rusqlite::Result<()> {
     let settings = config::get_config();
 
     for arg in env::args() {
-        if arg.eq_ignore_ascii_case("--help") || arg.eq_ignore_ascii_case("-h") {
+        if env::args().len() != 2
+            || arg.eq_ignore_ascii_case("--help")
+            || arg.eq_ignore_ascii_case("-h")
+        {
             println!("Usage: project-dir _project_name_");
             println!("  Switch to directory for project_name, activate appropriate environments.");
             exit(0);
         }
     }
+    let db_file = config::expand_home(settings.get::<String>("db_file").unwrap().as_str());
+    let project_dirs = settings
+        .get::<Vec<String>>("project_dirs")
+        .expect(&*format!(
+            "Unable to retrieve config value project_dirs from {:?}",
+            settings
+        ));
 
-    let conn = match db::Connection::open(settings.get::<String>("db_file").unwrap()) {
+    let conn = match db::Connection::open(db_file) {
         Err(err) => panic!("Configuration retrieval failure: {}", err),
         Ok(connection) => connection,
     };
@@ -66,7 +80,7 @@ fn main() -> rusqlite::Result<()> {
     db::create_db(&conn)?;
 
     // TODO: check for param --refresh, if found do find-projects(), otherwise read from db
-    find_projects(&conn, settings.get::<Vec<String>>("project_dirs").unwrap());
+    find_projects(&conn, project_dirs);
 
     let projects = match db::read_from_db(&conn) {
         Ok(projects) => projects,

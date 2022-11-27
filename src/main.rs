@@ -1,9 +1,11 @@
+// #![allow(unused_imports, unused_variables, dead_code)]
 mod config;
 mod db;
-
+use std::env;
 use std::fs;
 use std::io;
 use std::path::Path;
+use std::process::exit;
 
 fn scan_for_projects(conn: &db::Connection, dir: &Path) -> io::Result<()> {
     if dir.is_dir() {
@@ -11,15 +13,24 @@ fn scan_for_projects(conn: &db::Connection, dir: &Path) -> io::Result<()> {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
-                scan_for_projects(conn, &path)?;
-            } else {
-                if path.ends_with(".git") {
-                    println!("{:?}", path);
+                // TODO: really need to handle the error conditions here
+                let parts = path
+                    .components()
+                    .map(|x| x.as_os_str().to_str().unwrap())
+                    .collect::<Vec<&str>>();
+                let tail = parts[parts.len() - 1];
+                if tail.eq(".git") {
+                    let project_name = parts[parts.len() - 2];
                     let project = db::Project {
                         path: path.display().to_string(),
-                        name: "fred".to_string(),
+                        name: project_name.to_owned(),
                     };
-                    db::save_to_db(conn, &project);
+                    db::save_to_db(conn, &project).expect(
+                        format!("Failure to save project {} to database", project_name).as_str(),
+                    )
+                    // don't recurse here, we don't want sub-modules
+                } else {
+                    scan_for_projects(conn, &path)?;
                 }
             }
         }
@@ -28,6 +39,7 @@ fn scan_for_projects(conn: &db::Connection, dir: &Path) -> io::Result<()> {
 }
 
 fn find_projects(conn: &db::Connection, dirs: Vec<String>) {
+    db::clear_table(conn).expect("Error clearing database table");
     for dir in dirs.iter() {
         let path = Path::new(dir);
         scan_for_projects(conn, path)
@@ -35,15 +47,23 @@ fn find_projects(conn: &db::Connection, dirs: Vec<String>) {
     }
 }
 
-fn main() {
+fn main() -> rusqlite::Result<()> {
     let settings = config::get_config();
+
+    for arg in env::args() {
+        if arg.eq_ignore_ascii_case("--help") || arg.eq_ignore_ascii_case("-h") {
+            println!("Usage: project-dir _project_name_");
+            println!("  Switch to directory for project_name, activate appropriate environments.");
+            exit(0);
+        }
+    }
 
     let conn = match db::Connection::open(settings.get::<String>("db_file").unwrap()) {
         Err(err) => panic!("Configuration retrieval failure: {}", err),
         Ok(connection) => connection,
     };
 
-    db::create_db(&conn);
+    db::create_db(&conn)?;
 
     // TODO: check for param --refresh, if found do find-projects(), otherwise read from db
     find_projects(&conn, settings.get::<Vec<String>>("project_dirs").unwrap());
@@ -56,4 +76,5 @@ fn main() {
     for (name, path) in projects {
         println!("project: {}: {}", name, path);
     }
+    Ok(())
 }

@@ -1,5 +1,5 @@
 pub use rusqlite;
-pub use rusqlite::{params, Connection, Result};
+pub use rusqlite::{params, Connection};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -23,18 +23,14 @@ pub fn create_db(conn: &Connection) -> rusqlite::Result<()> {
     })
 }
 
-pub fn save_to_db(conn: &Connection, project: &Project) -> rusqlite::Result<()> {
+pub fn save_to_db(conn: &Connection, project: &Project) -> rusqlite::Result<usize> {
     conn.execute(
         "INSERT INTO projects (name, path) VALUES (?, ?)",
         params![project.name, project.path],
     )
-    .and_then(|updated| {
-        println!("Added {} row to the project db", updated);
-        Ok(())
-    })
 }
 
-pub fn read_from_db(conn: &Connection) -> Result<HashMap<String, String>> {
+pub fn read_from_db(conn: &Connection) -> rusqlite::Result<HashMap<String, String>> {
     let mut sql = conn.prepare("SELECT name, path FROM projects;")?;
     let result: HashMap<String, String> = HashMap::new();
     let rows = sql.query_map([], |row| row.get::<usize, String>(0))?;
@@ -46,8 +42,7 @@ pub fn read_from_db(conn: &Connection) -> Result<HashMap<String, String>> {
 
 pub fn clear_table(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM projects", ())
-        .and_then(|updated| {
-            println!("Added {} row to the project db", updated);
+        .and_then(|_updated| {
             Ok(())
         })
 }
